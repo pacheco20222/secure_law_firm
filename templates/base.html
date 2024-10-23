@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Secure Law Firm{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container-fluid position-relative d-flex p-0">
+        <!-- Sidebar Start -->
+        <div class="sidebar pe-4 pb-3">
+            <nav class="navbar bg-secondary navbar-dark">
+                <a href="{{ url_for('dashboard') }}" class="navbar-brand mx-4 mb-3">
+                    <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
+                </a>
+                <div class="navbar-nav w-100">
+                    <a href="{{ url_for('dashboard') }}" class="nav-item nav-link"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
+                    <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
+                    <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
+                    <a href="{{ url_for('edit_case') }}" class="nav-item nav-link"><i class="fa fa-edit me-2"></i>Edit Case</a>
+                    <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
+                </div>
+            </nav>
+        </div>
+        <!-- Sidebar End -->
+
+        <!-- Page Content -->
+        <div class="content">
+            <!-- Navbar Start -->
+            <nav class="navbar navbar-expand bg-secondary navbar-dark sticky-top px-4 py-0">
+                <h2>Welcome, {{ current_user.name }}</h2>
+                <div class="navbar-nav ms-auto">
+                    <a href="{{ url_for('profile') }}" class="nav-item nav-link"><i class="fa fa-user"></i> Profile</a>
+                    <a href="{{ url_for('logout') }}" class="nav-item nav-link"><i class="fa fa-sign-out-alt"></i> Log Out</a>
+                </div>
+            </nav>
+            <!-- Navbar End -->
+
+            <main>
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
