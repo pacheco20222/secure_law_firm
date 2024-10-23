@@ -43,19 +43,22 @@ def login():
     if request.method == 'POST' and form.validate_on_submit():
         email = form.email.data
         password = form.password.data
-        two_factor_code = request.form.get('2fa_code')
+        two_factor_code = form.two_factor_code.data  # Get the 2FA code from the form
 
         user = users.get(email)
-        if user and user['password'] == password:
-            if user['2fa_enabled']:
-                if user['2fa_code'] == two_factor_code:
+        if user:
+            if user['password'] == password:
+                if user['2fa_enabled']:
+                    if user['2fa_code'] == two_factor_code:
+                        session['user'] = {'name': user['name'], 'email': email}
+                        return redirect(url_for('dashboard'))
+                    else:
+                        flash('Invalid 2FA code', 'danger')
+                else:
                     session['user'] = {'name': user['name'], 'email': email}
                     return redirect(url_for('dashboard'))
-                else:
-                    flash('Invalid 2FA code', 'danger')
             else:
-                session['user'] = {'name': user['name'], 'email': email}
-                return redirect(url_for('dashboard'))
+                flash('Invalid password', 'danger')
         else:
             flash('Invalid email or password', 'danger')
     return render_template('login.html', form=form)
