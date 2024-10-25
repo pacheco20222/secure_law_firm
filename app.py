@@ -2,25 +2,26 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from dotenv import load_dotenv
 import os
 from flask_wtf import CSRFProtect
+import pyotp  # For 2FA verification
+from hashlib import sha256  # For password hashing
 from forms import LoginForm  # Import the form class
+from config import mysql_connection, ssh_tunnel  # Import tunnel functions from config.py
 
-load_dotenv()  # Load environment variables from .env file
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY')  # Get secret key from .env file
+app.secret_key = os.getenv('SECRET_KEY')
+
+# Check if the secret key is loaded properly (for debugging)
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY is not set. Please check your .env file.")
 
 csrf = CSRFProtect(app)
 
-
-# Dummy user data for demonstration
-users = {
-    'admin@example.com': {
-        'password': 'admin123',
-        'name': 'Admin User',
-        '2fa_enabled': True,
-        '2fa_code': '123456'  # Example 2FA code, normally this would be dynamic
-    }
-}
+# Function to verify the password (hashed)
+def verify_password(stored_password, provided_password):
+    return stored_password == sha256(provided_password.encode('utf-8')).hexdigest()
 
 @app.route('/')
 def index():
@@ -29,13 +30,11 @@ def index():
     else:
         return redirect(url_for('login'))
 
-
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
     return render_template('dashboard.html', current_user=session['user'])
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -45,24 +44,50 @@ def login():
         password = form.password.data
         two_factor_code = form.two_factor_code.data  # Get the 2FA code from the form
 
-        user = users.get(email)
+        # Start the SSH tunnel using the existing function
+        tunnel = ssh_tunnel()
+        tunnel.start()
+
+        # Use the existing MySQL connection function via SSH tunnel
+        connection = mysql_connection(tunnel)
+        cursor = connection.cursor()
+
+        # Query to fetch the user details from the database
+        query = "SELECT email, hashed_password, 2fa_secret, 2fa_enabled, name FROM workers WHERE email = %s"
+        cursor.execute(query, (email,))
+        user = cursor.fetchone()  # Fetch the user record
+
         if user:
-            if user['password'] == password:
-                if user['2fa_enabled']:
-                    if user['2fa_code'] == two_factor_code:
-                        session['user'] = {'name': user['name'], 'email': email}
+            # Unpack user details
+            db_email, db_password, db_2fa_secret, db_2fa_enabled, db_name = user
+
+            # Verify the password
+            if verify_password(db_password, password):
+                if db_2fa_enabled:  # If 2FA is enabled, verify the 2FA code
+                    totp = pyotp.TOTP(db_2fa_secret)
+                    if totp.verify(two_factor_code):
+                        # Successful login, store session
+                        session['user'] = {'name': db_name, 'email': db_email}
+                        tunnel.stop()  # Stop the SSH tunnel
                         return redirect(url_for('dashboard'))
                     else:
                         flash('Invalid 2FA code', 'danger')
                 else:
-                    session['user'] = {'name': user['name'], 'email': email}
+                    # Login without 2FA
+                    session['user'] = {'name': db_name, 'email': db_email}
+                    tunnel.stop()  # Stop the SSH tunnel
                     return redirect(url_for('dashboard'))
             else:
                 flash('Invalid password', 'danger')
         else:
             flash('Invalid email or password', 'danger')
-    return render_template('login.html', form=form)
 
+        # Close the connection and stop the tunnel
+        cursor.close()
+        connection.close()
+        tunnel.stop()
+
+    return render_template('login.html', form=form)
 
 @app.route('/logout')
 def logout():
@@ -98,6 +123,6 @@ def view_case():
     return render_template('view_case.html')
 
 
-if __name__ == '__main__':
-    csrf.init_app(app)  # Enable CSRF protection
+
+if __name__ == "__main__":
     app.run(debug=True)
