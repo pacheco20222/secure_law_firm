@@ -42,15 +42,25 @@
                     </div>
                     <div class="ms-3">
                         <h6 class="mb-0">{{ current_user.name }}</h6>
-                        <span>Admin</span>
+                        {% if current_user.role %}
+                            <span>{{ current_user.role.title() }}</span>
+                        {% else %}
+                            <span>User</span> <!-- Fallback if role is undefined -->
+                        {% endif %}
                     </div>
                 </div>
+                
                 <div class="navbar-nav w-100">
                     <a href="{{ url_for('dashboard') }}" class="nav-item nav-link active"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
                     <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
                     <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
                     <a href="{{ url_for('edit_case') }}" class="nav-item nav-link"><i class="fa fa-edit me-2"></i>Edit Case</a>
                     <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
+
+                    <!-- Admin only: Create User option -->
+                    {% if current_user.role == 'admin' %}
+                        <a href="{{ url_for('create_user') }}" class="nav-item nav-link"><i class="fa fa-user-plus me-2"></i>Create User</a>
+                    {% endif %}
                 </div>
             </nav>
         </div>
