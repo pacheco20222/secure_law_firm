@@ -116,6 +116,7 @@ def create_user():
             'last_name': form.last_name.data,
             'second_last_name': form.second_last_name.data,
             'email': form.email.data,
+            'phone': form.phone.data,
             'role': form.role.data,
             'password': form.password.data
         }

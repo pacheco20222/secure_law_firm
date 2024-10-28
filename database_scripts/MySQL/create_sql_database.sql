@@ -8,6 +8,7 @@ CREATE TABLE workers (
     last_name VARCHAR(100) NOT NULL,
     second_last_name VARCHAR(100),
     email VARCHAR(100) UNIQUE NOT NULL,
+    phone VARCHAR(25) UNIQUE NOT NULL,
     role VARCHAR(50) NOT NULL,
     company_id VARCHAR(20) UNIQUE NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
@@ -24,7 +25,7 @@ CREATE TABLE clients (
     last_name VARCHAR(100) NOT NULL,
     second_last_name VARCHAR(100),
     email VARCHAR(100) NOT NULL UNIQUE,
-    phone VARCHAR(25) NOT NULL,
+    phone VARCHAR(25) UNIQUE NOT NULL,
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

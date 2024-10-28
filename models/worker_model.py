@@ -57,13 +57,13 @@ class WorkerModel:
             
             # Insert the worker into the workers table
             insert_query = """
-            INSERT INTO workers (name, second_name, last_name, second_last_name, email, role, company_id, hashed_password, 2fa_secret, 2fa_enabled)
+            INSERT INTO workers (name, second_name, last_name, second_last_name, email, phone, role, company_id, hashed_password, 2fa_secret, 2fa_enabled)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """
             
             self.cursor.execute(insert_query, (
                 data['name'], data['second_name'], data['last_name'], data['second_last_name'], 
-                data['email'], data['role'], company_id, hashed_password, two_fa_secret, True
+                data['email'], data['phone'], data['role'], company_id, hashed_password, two_fa_secret, True
             ))
             self.connection.commit()
             return True
