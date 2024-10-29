@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify 2FA</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+</head>
+<body>
+    <div class="container-fluid pt-4 px-4">
+        <div class="bg-secondary text-center rounded p-4">
+            <h3>Verify 2FA</h3>
+            <img src="{{ url_for('static', filename=qr_code_path) }}" alt="QR Code" class="img-fluid">
+            <form action="{{ url_for('verify_2fa') }}" method="POST">
+                <div class="form-group">
+                    <label for="two_factor_code">Enter 2FA Code</label>
+                    <input type="text" class="form-control" id="two_factor_code" name="two_factor_code" required>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Verify and Complete Signup</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

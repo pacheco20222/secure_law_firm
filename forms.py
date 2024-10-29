@@ -15,6 +15,6 @@ class CreateUserForm(FlaskForm):
     second_last_name = StringField('Second Last Name', validators=[Length(max=100)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=100)])
     phone = StringField('Phone', validators=[DataRequired(), Length(min=10, max=15)])
-    role = SelectField('Role', choices=[('admin', 'Admin'), ('lawyer', 'Lawyer'), ('legal_assistant', 'Legal Assistant')], validators=[DataRequired()])
+    role = SelectField('Role', choices=[('lawyer', 'Lawyer'), ('legal_assistant', 'Legal Assistant')], validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=255)])
     submit = SubmitField('Create User')

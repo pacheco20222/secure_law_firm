@@ -1,26 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
     <title>Secure Law Firm - Sign In</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="" name="keywords">
-    <meta content="" name="description">
-
-    <!-- Favicon -->
-    <link href="{{ url_for('static', filename='img/favicon.ico') }}" rel="icon">
-
-    <!-- Google Web Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Roboto:wght@500;700&display=swap" rel="stylesheet"> 
-    
-    <!-- Customized Bootstrap Stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
-
 <body>
     <div class="container-fluid position-relative d-flex p-0">
         <div class="container-fluid">
@@ -28,9 +14,6 @@
                 <div class="col-12 col-sm-8 col-md-6 col-lg-5 col-xl-4">
                     <div class="bg-secondary rounded p-4 p-sm-5 my-4 mx-3">
                         <div class="d-flex align-items-center justify-content-between mb-3">
-                            <a href="{{ url_for('dashboard') }}" class="">
-                                <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
-                            </a>
                             <h3>Sign In</h3>
                         </div>
                         <form action="{{ url_for('login') }}" method="POST">
@@ -47,20 +30,18 @@
                                 {{ form.two_factor_code(class_="form-control") }}
                                 <label for="floating2FA">2FA Code</label>
                             </div>
-                            <div class="d-flex align-items-center justify-content-between mb-4">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="exampleCheck1">
-                                    <label class="form-check-label" for="exampleCheck1">Remember me</label>
-                                </div>
-                                <a href="#">Forgot Password</a>
-                            </div>
                             <button type="submit" class="btn btn-primary py-3 w-100 mb-4">Sign In</button>
-                        </form>                        
+                        </form>
+                        
+                        <!-- Sign Up Redirect Button -->
+                        <div class="text-center">
+                            <p>Don't have an account?</p>
+                            <a href="{{ url_for('signup') }}" class="btn btn-secondary py-2 w-100">Sign Up</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </body>
-
 </html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
+</head>
+<body>
+    <div class="container-fluid pt-4 px-4">
+        <div class="bg-secondary text-center rounded p-4">
+            <h3>Signup</h3>
+            <form action="{{ url_for('signup') }}" method="POST">
+                {{ form.hidden_tag() }}
+                {{ form.name.label }} {{ form.name(class_="form-control") }}
+                {{ form.second_name.label }} {{ form.second_name(class_="form-control") }}
+                {{ form.last_name.label }} {{ form.last_name(class_="form-control") }}
+                {{ form.second_last_name.label }} {{ form.second_last_name(class_="form-control") }}
+                {{ form.email.label }} {{ form.email(class_="form-control") }}
+                {{ form.phone.label }} {{ form.phone(class_="form-control") }}
+                {{ form.role.label }} {{ form.role(class_="form-control") }}
+                {{ form.password.label }} {{ form.password(class_="form-control") }}
+                <button type="submit" class="btn btn-primary mt-3">Sign Up</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
