@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>Secure Law Firm - Sign In</title>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
@@ -19,16 +19,16 @@
                         <form action="{{ url_for('login') }}" method="POST">
                             {{ form.hidden_tag() }}
                             <div class="form-floating mb-3">
-                                {{ form.email(class_="form-control") }}
-                                <label for="floatingInput">Email address</label>
+                                {{ form.email(class_="form-control", id="email") }}
+                                <label for="email">Email address</label>
                             </div>
                             <div class="form-floating mb-4">
-                                {{ form.password(class_="form-control") }}
-                                <label for="floatingPassword">Password</label>
+                                {{ form.password(class_="form-control", id="password") }}
+                                <label for="password">Password</label>
                             </div>
                             <div class="form-floating mb-4">
-                                {{ form.two_factor_code(class_="form-control") }}
-                                <label for="floating2FA">2FA Code</label>
+                                {{ form.two_factor_code(class_="form-control", id="twoFactorCode") }}
+                                <label for="twoFactorCode">2FA Code</label>
                             </div>
                             <button type="submit" class="btn btn-primary py-3 w-100 mb-4">Sign In</button>
                         </form>

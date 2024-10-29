@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scan QR Code</title>
+    <title>QR Code for 2FA</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="container text-center my-5">
-        <h3>Scan this QR Code</h3>
-        <p>Use Google Authenticator to scan this code and enable 2FA for your account.</p>
-        <img src="{{ qr_code_path }}" alt="QR Code" class="img-fluid">
-        <div class="mt-4">
-            <a href="{{ url_for('login') }}" class="btn btn-primary">Go to Login</a>
+    <div class="container-fluid pt-4 px-4">
+        <div class="bg-secondary text-center rounded p-4">
+            <h3>Scan this QR Code</h3>
+            <p>Use your authenticator app to scan the QR code below to enable 2FA.</p>
+            <img src="{{ url_for('static', filename=qr_code_path) }}" alt="QR Code for 2FA" class="img-fluid">
+            <p>After scanning, you can use the code to log in with 2FA enabled.</p>
+            <a href="{{ url_for('login') }}" class="btn btn-primary mt-3">Back to Login</a>
         </div>
     </div>
 </body>

@@ -1,205 +1,136 @@
+# app.py
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-import secrets  # For generating secret key
-from dotenv import load_dotenv
+from config import SessionLocal, close_tunnel
+from models.worker_model import Worker
+from services.auth_service import verify_password, verify_2fa_code, hash_password, generate_2fa_secret, generate_qr_code
+from forms import LoginForm, SignupForm
+from sqlalchemy.exc import IntegrityError
+import secrets
 import os
-from flask_wtf import CSRFProtect
-import pyotp  # For 2FA verification
-from hashlib import sha256  # For password hashing
-from forms import LoginForm, CreateUserForm
-from config import mysql_connection, ssh_tunnel
-from models.worker_model import WorkerModel
-from functools import wraps  # For fixing route decorator issues
-import qrcode
-
-# Load environment variables from .env file
-load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
-csrf = CSRFProtect(app)
 
-# Function to verify hashed password
-def verify_password(stored_password, provided_password):
-    return stored_password == sha256(provided_password.encode('utf-8')).hexdigest()
-
-# Decorator to ensure user is authenticated
-def login_required(route_func):
-    @wraps(route_func)
-    def wrapper(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
-        return route_func(*args, **kwargs)
-    return wrapper
-
+# Default route
 @app.route('/')
 def index():
     if 'user' in session:
         return redirect(url_for('dashboard'))
-    else:
-        return redirect(url_for('login'))
+    return redirect(url_for('login'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
-    return render_template('dashboard.html', current_user=session['user'])
+    if 'user' in session:
+        db_session = SessionLocal()
+        user = db_session.query(Worker).get(session['user'])
+        db_session.close()
+        return render_template('dashboard.html', current_user=user)
+    return redirect(url_for('login'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-    if request.method == 'POST':
-        print("Login form submitted.")  # Debug
-        if form.validate_on_submit():
-            print("Form validated successfully.")  # Debug
-            email = form.email.data
-            password = form.password.data
-            two_factor_code = form.two_factor_code.data
+    db_session = SessionLocal()
 
-            # Start the SSH tunnel
-            tunnel = ssh_tunnel()
-            tunnel.start()
-            print("SSH tunnel started.")  # Debug
+    if form.validate_on_submit():
+        email = form.email.data
+        password = form.password.data
+        two_factor_code = form.two_factor_code.data
 
-            # Connect to MySQL
-            connection = mysql_connection(tunnel)
-            cursor = connection.cursor()
-            print("Connected to MySQL.")  # Debug
-
-            # Query user details
-            query = "SELECT email, hashed_password, 2fa_secret, 2fa_enabled, name, role FROM workers WHERE email = %s"
-            cursor.execute(query, (email,))
-            user = cursor.fetchone()
-            print("User query executed.")  # Debug
-
-            if user:
-                db_email, db_password, db_2fa_secret, db_2fa_enabled, db_name, db_role = user
-                print(f"User found: {db_email}, Role: {db_role}")  # Debug
-
-                # Verify password
-                if verify_password(db_password, password):
-                    print("Password verified.")  # Debug
-                    if db_2fa_enabled:
-                        totp = pyotp.TOTP(db_2fa_secret)
-                        expected_code = totp.now()
-                        print(f"2FA Secret in DB: {db_2fa_secret}")  # Log 2FA Secret
-                        print(f"Expected 2FA code: {expected_code}")  # Log expected code
-                        print(f"User-entered 2FA code: {two_factor_code}")  # Log entered code
-                        if totp.verify(two_factor_code):
-                            print("2FA code verified.") # Debug
-                            # Set session
-                            session['user'] = {
-                                'name': db_name,
-                                'email': db_email,
-                                'role': db_role
-                            }
-                            print("Session set.")  # Debug
-                            tunnel.stop()
-                            return redirect(url_for('dashboard'))
-                        else:
-                            print("Invalid 2FA code.")  # Debug
-                            flash('Invalid 2FA code', 'danger')
-                    else:
-                        flash('2FA is required for login.', 'danger')
-                else:
-                    print("Invalid password.")  # Debug
-                    flash('Invalid password', 'danger')
+        user = db_session.query(Worker).filter_by(email=email).first()
+        if user and verify_password(user.hashed_password, password):
+            if user.two_fa_enabled and verify_2fa_code(user.two_fa_secret, two_factor_code):
+                session['user'] = user.id
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
             else:
-                print("No user found with that email.")  # Debug
-                flash('Invalid email or password', 'danger')
-
-            cursor.close()
-            connection.close()
-            tunnel.stop()
+                flash('Invalid 2FA code.', 'danger')
         else:
-            print("Form validation failed.")  # Debug
-            print("Form errors:", form.errors)  # Debug
-            flash('Form validation failed. Please check the input fields.', 'danger')
+            flash('Invalid email or password.', 'danger')
+    else:
+        # Display form validation errors as flash messages
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{field.capitalize()}: {error}", 'danger')
 
-    return render_template('login.html', form=form)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
+    db_session.close()
+    return render_template('login.html', form=form, current_user=None)  # Pass current_user=None
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    form = CreateUserForm()
-    if request.method == 'POST' and form.validate_on_submit():
-        # Collect form data
-        data = {
-            'name': form.name.data,
-            'second_name': form.second_name.data,
-            'last_name': form.last_name.data,
-            'second_last_name': form.second_last_name.data,
-            'email': form.email.data,
-            'phone': form.phone.data,
-            'role': form.role.data,
-            'password': form.password.data
-        }
+    form = SignupForm()
+    if form.validate_on_submit():
+        db_session = SessionLocal()
+        try:
+            hashed_password = hash_password(form.password.data)
+            two_fa_secret = generate_2fa_secret()
 
-        # Create a worker using the WorkerModel class
-        worker_model = WorkerModel()
-        if worker_model.create_worker(data):
-            # Generate 2FA secret and QR code
-            new_user_2fa_secret = worker_model.generate_2fa_secret()
-            print(f"Generated 2FA secret for {data['email']}: {new_user_2fa_secret}")
+            new_user = Worker(
+                name=form.name.data,
+                second_name=form.second_name.data,
+                last_name=form.last_name.data,
+                second_last_name=form.second_last_name.data,
+                email=form.email.data,
+                phone=form.phone.data,
+                role=form.role.data,
+                company_id=f"LR-{db_session.query(Worker).count() + 1:03d}",
+                hashed_password=hashed_password,
+                two_fa_secret=two_fa_secret,
+                two_fa_enabled=True
+            )
 
-            # Save 2FA secret in session to retrieve on login verification
-            session['temp_2fa_secret'] = new_user_2fa_secret
-            otp_uri = pyotp.TOTP(new_user_2fa_secret).provisioning_uri(name=data['email'], issuer_name="SecureLawFirm")
+            db_session.add(new_user)
+            db_session.commit()
 
-            # Define QR code path
-            qr_code_dir = os.path.join(app.root_path, 'static', 'qrcodes')
-            os.makedirs(qr_code_dir, exist_ok=True)
-            qr_code_path = os.path.join(qr_code_dir, f"{data['email']}_2fa_qr.png")
-            qr_code_img = qrcode.make(otp_uri)
-            qr_code_img.save(qr_code_path)
+            qr_code_path = generate_qr_code(form.email.data, "SecureLawFirm", two_fa_secret)
+            relative_qr_code_path = f"qrcodes/{os.path.basename(qr_code_path)}"
 
-            flash('User created successfully! Scan the QR code with Google Authenticator.', 'success')
-            return render_template('display_qr.html', qr_code_path=f"/static/qrcodes/{data['email']}_2fa_qr.png")
-        else:
-            flash('Error creating user.', 'danger')
+            flash("User created successfully! Scan the QR code for 2FA setup.", "success")
+            return render_template('display_qr.html', qr_code_path=relative_qr_code_path, current_user=None)  # Pass current_user=None
 
-    return render_template('signup.html', form=form)
+        except IntegrityError:
+            db_session.rollback()
+            flash("Error: Email or phone number already exists.", "danger")
+        finally:
+            db_session.close()
+    else:
+        # Display form validation errors as flash messages
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{field.capitalize()}: {error}", 'danger')
 
-@app.route('/verify_2fa', methods=['GET', 'POST'])
-def verify_2fa():
-    if request.method == 'POST':
-        two_factor_code = request.form.get('two_factor_code')
+    return render_template('signup.html', form=form, current_user=None)  # Pass current_user=None
 
-        # Retrieve temporary 2FA secret and user data
-        new_user_2fa_secret = session.get('temp_2fa_secret')
-        if new_user_2fa_secret:
-            totp = pyotp.TOTP(new_user_2fa_secret)
-            if totp.verify(two_factor_code):
-                # Clear temporary 2FA secret from session
-                session.pop('temp_2fa_secret', None)
-                flash('Account created successfully. You can now log in.', 'success')
-                return redirect(url_for('login'))
-            else:
-                flash('Invalid 2FA code. Please try again.', 'danger')
 
-    return render_template('verify_2fa.html')
+# Logout route
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for('login'))
 
-@app.route('/add_case', methods=['GET', 'POST'])
-@login_required
+
+@app.route('/add_case')
 def add_case():
     return render_template('add_case.html')
 
-@app.route('/edit_case', methods=['GET', 'POST'])
-@login_required
+@app.route('/view_case')
+def view_case():
+    return render_template('view_case.html')
+
+@app.route('/edit_case')
 def edit_case():
     return render_template('edit_case.html')
 
-@app.route('/delete_case', methods=['GET', 'POST'])
-@login_required
+@app.route('/delete_case')
 def delete_case():
     return render_template('delete_case.html')
 
-@app.route('/view_case', methods=['GET', 'POST'])
-@login_required
-def view_case():
-    return render_template('view_case.html')
+# Close session and SSH tunnel on teardown
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    close_tunnel()  # Ensure SSH tunnel is closed
 
 if __name__ == "__main__":
     app.run(debug=True)

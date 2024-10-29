@@ -6,6 +6,7 @@ import dotenv
 from sshtunnel import SSHTunnelForwarder
 from hashlib import sha256  # For password hashing
 
+# Load environment variables
 dotenv.load_dotenv()
 
 # SSH Tunnel configuration
@@ -54,10 +55,12 @@ def generate_company_id(cursor):
 # Function to create admin user in MySQL with 2FA
 def create_admin_user():
     tunnel = None
+    connection = None
     try:
         # Start the SSH tunnel
         tunnel = create_ssh_tunnel()
         tunnel.start()
+        print("SSH tunnel started.")
 
         # Connect to MySQL via the SSH tunnel
         connection = pymysql.connect(
@@ -68,16 +71,22 @@ def create_admin_user():
             port=MYSQL_PORT  # The local bind port from the SSH tunnel
         )
         cursor = connection.cursor()
+        print("Connected to MySQL.")
 
         # Generate 2FA secret for the admin
         admin_2fa_secret = pyotp.random_base32()
         print(f"Admin's 2FA Secret: {admin_2fa_secret}")
 
         # Generate a QR code for Google Authenticator
-        otp_uri = pyotp.totp.TOTP(admin_2fa_secret).provisioning_uri(name=ADMIN_EMAIL, issuer_name="SecureLawFirm")
+        otp_uri = pyotp.TOTP(admin_2fa_secret).provisioning_uri(name=ADMIN_EMAIL, issuer_name="SecureLawFirm")
+        
+        # Ensure QR code directory exists
+        qr_code_path = os.path.join("static", "qrcodes")
+        os.makedirs(qr_code_path, exist_ok=True)
         qr = qrcode.make(otp_uri)
-        qr.save("admin_2fa_qr.png")
-        print("QR code generated and saved as 'admin_2fa_qr.png'.")
+        qr_file_path = os.path.join(qr_code_path, "admin_2fa_qr.png")
+        qr.save(qr_file_path)
+        print(f"QR code generated and saved as '{qr_file_path}'.")
 
         # Generate the company ID in the format LR-XXX
         company_id = generate_company_id(cursor)
@@ -85,6 +94,7 @@ def create_admin_user():
         # Hash the admin password
         admin_hashed_password = hash_password(ADMIN_PASSWORD)
 
+        # Insert admin user into `workers` table
         # Insert admin user into `workers` table
         query = """
         INSERT INTO workers (
@@ -95,6 +105,7 @@ def create_admin_user():
             ADMIN_NAME, ADMIN_LAST_NAME, ADMIN_EMAIL, ADMIN_PHONE, 'admin', company_id, 
             admin_hashed_password, admin_2fa_secret, True
         ))
+
         connection.commit()
 
         print(f"Admin user created successfully with company ID: {company_id}.")
@@ -103,10 +114,12 @@ def create_admin_user():
         print(f"Error creating admin user: {e}")
     
     finally:
-        if tunnel:
-            tunnel.stop()
         if connection:
             connection.close()
+            print("MySQL connection closed.")
+        if tunnel:
+            tunnel.stop()
+            print("SSH tunnel closed.")
 
 if __name__ == "__main__":
     create_admin_user()

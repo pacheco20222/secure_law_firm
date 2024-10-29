@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <metad charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{%block title%}Secure Law Firm{%endblock%}</title>
-        <link rel="stylesheet" href="{{url_for('static', filename='css/bootstrap.min.css')}}">
-        <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}">
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Secure Law Firm{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
 
 <body>
     <div class="container-fluid position-relative d-flex p-0">
-        <!-- This is where the side bar with all the option starts-->
-         <div class="sidebar pe-4 pb-3">
+        <!-- Sidebar Start -->
+        <div class="sidebar pe-4 pb-3">
             <nav class="navbar bg-secondary navbar-dark">
-                <a href="{{url_for('dashboard')}}" class="navbar-brand mx-4 mb-3">
+                <a href="{{ url_for('dashboard') }}" class="navbar-brand mx-4 mb-3">
                     <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
                 </a>
                 <div class="navbar-nav w-100">
@@ -24,13 +24,14 @@
                     <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
                 </div>
             </nav>
-         </div>
-            <!-- This is where the side bar with all the option ends-->
-        <!-- This is where the page content starts-->
+        </div>
+        <!-- Sidebar End -->
+
+        <!-- Content Start -->
         <div class="content">
             <!-- Navbar Start -->
             <nav class="navbar navbar-expand bg-secondary navbar-dark sticky-top px-4 py-0">
-                <h2>Welcome, {{ current_user.name }}</h2>
+                <h2>Welcome, {% if current_user %}{{ current_user.name }}{% else %}Guest{% endif %}</h2>
                 <div class="navbar-nav ms-auto">
                     <a href="{{ url_for('profile') }}" class="nav-item nav-link"><i class="fa fa-user"></i> Profile</a>
                     <a href="{{ url_for('logout') }}" class="nav-item nav-link"><i class="fa fa-sign-out-alt"></i> Log Out</a>
@@ -38,13 +39,31 @@
             </nav>
             <!-- Navbar End -->
 
-            <main>
+            <!-- Flash Messages Start -->
+            <div class="container mt-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+            <!-- Flash Messages End -->
+
+            <!-- Main Content -->
+            <main class="p-4">
                 {% block content %}{% endblock %}
             </main> 
         </div>
+        <!-- Content End -->
     </div>
-    <!-- Scripts from javascripts-->
+
+    <!-- JavaScript Libraries -->
     <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{url_for('static', filename='js/script.js')}}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
