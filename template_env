@@ -1,0 +1,22 @@
+SSH_HOST="The ip of the server you want to connect to"
+SSH_PORT="port you will use to create the ssh tunnel"
+SSH_USER="the user of the server you will connect to"
+SSH_KEY_PATH="The path to your ssh key"
+
+MYSQL_HOST=127.0.0.1
+MYSQL_USER="Username of the user you will use to connect to the database MySQL, the MySQL server username not the server username"
+MYSQL_PASSWORD="Password of the user you will use to connect to the database MySQL, the MySQL server password not the server password"
+MYSQL_DB="Name of the database you will use to connect to the database MySQL"
+MYSQL_LOCAL_PORT="The port your computer will use to create the tunnel, if you have MySQL running on your pc might need to set up
+another port from the usual MySQL port"
+
+MONGO_HOST=127.0.0.1
+MONGO_LOCAL_PORT="The port your computer will use to create the tunnel, if you have MongoDB running on your pc might need to set up
+another port from the usual MongoDB"
+
+ADMIN_NAME=Jose
+ADMIN_LAST_NAME=Pacheco
+ADMIN_USER=admin_pacheco
+ADMIN_PASSWORD=Pajarito1234
+ADMIN_EMAIL=jrp2022@gmail.com
+ADMIN_PHONE=9997002072
