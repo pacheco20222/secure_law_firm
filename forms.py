@@ -1,6 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField, SubmitField
 from wtforms.validators import DataRequired, Email, Length
+from wtforms import StringField, TextAreaField, DateField, SelectField, SubmitField
+from wtforms.validators import DataRequired
 
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=100)])
@@ -18,3 +20,19 @@ class SignupForm(FlaskForm):
     role = SelectField('Role', choices=[('admin', 'Admin'), ('lawyer', 'Lawyer'), ('assistant', 'Assistant')], validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=255)])
     submit = SubmitField('Sign Up')
+
+
+
+class CaseForm(FlaskForm):
+    client_name = StringField('Client Name', validators=[DataRequired()])
+    client_email = StringField('Client Email', validators=[DataRequired()])
+    lawyer_id = SelectField('Assign to Lawyer', coerce=int, validators=[DataRequired()])
+    assistant_id = SelectField('Assign to Assistant (Optional)', coerce=int)
+    case_title = StringField('Case Title', validators=[DataRequired()])
+    case_description = TextAreaField('Description')
+    case_type = StringField('Case Type', validators=[DataRequired()])
+    court_date = DateField('Court Date')
+    judge_name = StringField('Judge Name')
+    document_title = StringField('Document Title', validators=[DataRequired()])
+    document_description = TextAreaField('Document Description')
+    submit = SubmitField('Create Case')
