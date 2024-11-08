@@ -3,7 +3,7 @@
 SET SESSION sql_mode = '';
 
 CREATE DATABASE law_firm;
-GRANT ALL PRIVILEGES ON law_firm.* TO 'your_username'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON law_firm.* TO 'user'@'127.0.0.1';
 
 USE law_firm;
 

@@ -54,8 +54,6 @@
                     <a href="{{ url_for('dashboard') }}" class="nav-item nav-link active"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
                     <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
                     <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
-                    <a href="{{ url_for('edit_case') }}" class="nav-item nav-link"><i class="fa fa-edit me-2"></i>Edit Case</a>
-                    <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
                 </div>
             </nav>
         </div>
@@ -106,6 +104,27 @@
                     <h3>Welcome to the Secure Law Firm Dashboard</h3>
                     <p>Use the sidebar to navigate through different sections of the system.</p>
                 </div>
+
+                <!-- Case List Start -->
+                <div class="container mt-5">
+                    <h4>Your Cases</h4>
+                    <div class="list-group">
+                        {% for case in cases %}
+                            <div class="list-group-item bg-dark text-light rounded mb-2">
+                                <h5>{{ case.case_title }}</h5>
+                                <p>{{ case.case_description }}</p>
+                                <p><strong>Type:</strong> {{ case.case_type }} | <strong>Status:</strong> {{ case.case_status or 'N/A' }}</p>
+                                <a href="{{ url_for('view_case_details', case_id=case.id) }}" class="btn btn-primary">View Case Details</a>
+                                {% if current_user.role == 'lawyer' %}
+                                    <a href="{{ url_for('edit_document', document_id=case.id) }}" class="btn btn-warning">Edit Case</a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No cases available.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Case List End -->
             </div>
             <!-- Main Content End -->
         </div>

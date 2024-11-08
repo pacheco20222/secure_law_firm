@@ -10,6 +10,7 @@
 
 <body>
     <div class="container-fluid position-relative d-flex p-0">
+        
         <!-- Sidebar Start -->
         <div class="sidebar pe-4 pb-3">
             <nav class="navbar bg-secondary navbar-dark">
@@ -17,10 +18,12 @@
                     <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
                 </a>
                 <div class="navbar-nav w-100">
+                    <!-- base.html -->
                     <a href="{{ url_for('dashboard') }}" class="nav-item nav-link"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
                     <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
                     <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
-                    <a href="{{ url_for('edit_case') }}" class="nav-item nav-link"><i class="fa fa-edit me-2"></i>Edit Case</a>
+                    <!-- Remove Edit Document link -->
+                    <a href="{{ url_for('view_case_details') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case Details</a>
                     <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
                 </div>
             </nav>
@@ -29,6 +32,7 @@
 
         <!-- Content Start -->
         <div class="content">
+            
             <!-- Navbar Start -->
             <nav class="navbar navbar-expand bg-secondary navbar-dark sticky-top px-4 py-0">
                 <h2>Welcome, {% if current_user %}{{ current_user.name }}{% else %}Guest{% endif %}</h2>
@@ -41,16 +45,18 @@
 
             <!-- Flash Messages Start -->
             <div class="container mt-4">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+                {% if request.endpoint == 'login' or request.endpoint == 'dashboard' %}
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
             </div>
             <!-- Flash Messages End -->
 

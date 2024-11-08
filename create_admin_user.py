@@ -21,7 +21,7 @@ MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
 MYSQL_USER = os.getenv("MYSQL_USER")
 MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
 MYSQL_DATABASE = os.getenv("MYSQL_DB")
-MYSQL_PORT = 3309  # Local port for SSH tunnel
+MYSQL_PORT = 3310  # Local port for SSH tunnel
 
 # Admin credentials from .env
 ADMIN_NAME = os.getenv("ADMIN_NAME")

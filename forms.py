@@ -21,11 +21,14 @@ class SignupForm(FlaskForm):
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=255)])
     submit = SubmitField('Sign Up')
 
-
-
 class CaseForm(FlaskForm):
-    client_name = StringField('Client Name', validators=[DataRequired()])
+    client_name = StringField('First Name', validators=[DataRequired()])
+    client_second_name = StringField('Second Name')
+    client_last_name = StringField('Last Name', validators=[DataRequired()])
+    client_second_last_name = StringField('Second Last Name (optional)')
     client_email = StringField('Client Email', validators=[DataRequired()])
+    client_phone = StringField('Client Phone Number', validators=[DataRequired()])
+    client_address = StringField('Client Address', validators=[DataRequired()])
     lawyer_id = SelectField('Assign to Lawyer', coerce=int, validators=[DataRequired()])
     assistant_id = SelectField('Assign to Assistant (Optional)', coerce=int)
     case_title = StringField('Case Title', validators=[DataRequired()])

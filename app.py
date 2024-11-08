@@ -1,6 +1,6 @@
 # app.py
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-from config import SessionLocal, close_tunnels, mongo_db  # Corrected import
+from config import SessionLocal, close_tunnels, mongo_db  
 from models.worker_model import Worker
 from services.auth_service import verify_password, verify_2fa_code, hash_password, generate_2fa_secret, generate_qr_code
 from forms import LoginForm, SignupForm
@@ -11,6 +11,8 @@ from sqlalchemy.exc import IntegrityError
 import secrets
 import os
 from datetime import datetime
+import base64
+from services.digitalocean_space_service import upload_file_to_space, delete_file_from_space
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -27,9 +29,19 @@ def dashboard():
     if 'user' in session:
         db_session = SessionLocal()
         user = db_session.query(Worker).get(session['user'])
+
+        # Retrieve cases based on user role
+        if user.role == 'admin':
+            cases = db_session.query(Case).all()
+        elif user.role == 'lawyer':
+            cases = db_session.query(Case).filter_by(worker_id=user.id).all()
+        else:  # For assistants, show only their assigned cases
+            cases = db_session.query(Case).join(Client, Case.client_id == Client.id).filter(Client.worker_id == user.id).all()
+        
         db_session.close()
-        return render_template('dashboard.html', current_user=user)
+        return render_template('dashboard.html', current_user=user, cases=cases)
     return redirect(url_for('login'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -126,11 +138,22 @@ def add_case():
             if not client:
                 client = Client(
                     name=form.client_name.data,
+                    second_name=form.client_second_name.data,
+                    last_name=form.client_last_name.data,
+                    second_last_name=form.client_second_last_name.data,
                     email=form.client_email.data,
-                    phone="default_phone"  # Adjust as needed
+                    phone=form.client_phone.data,
+                    address=form.client_address.data
                 )
                 db_session.add(client)
                 db_session.commit()
+
+            # Upload document to DigitalOcean Spaces
+            uploaded_file = request.files.get("document")
+            if uploaded_file:
+                file_url = upload_file_to_space(uploaded_file)
+            else:
+                file_url = None
 
             # Insert document metadata into MongoDB
             document_data = {
@@ -139,11 +162,11 @@ def add_case():
                 "worker_id": form.lawyer_id.data,
                 "document_title": form.document_title.data,
                 "document_description": form.document_description.data,
-                "file_content": "<base64_encoded_content>",  # Placeholder for actual content
+                "file_url": file_url,
                 "uploaded_by": "Admin",
                 "uploaded_at": datetime.utcnow(),
                 "last_modified": datetime.utcnow(),
-                "file_type": "application/pdf",
+                "file_type": uploaded_file.content_type if uploaded_file else "application/octet-stream",
                 "document_tags": ["tag1", "tag2"]
             }
             document_id = mongo_db.documents.insert_one(document_data).inserted_id
@@ -167,7 +190,7 @@ def add_case():
                 {"$set": {"case_id": new_case.id}}
             )
 
-            flash("Case created successfully and linked with document in MongoDB.", "success")
+            flash("Case created successfully and linked with document in DigitalOcean Spaces.", "success")
             return redirect(url_for('dashboard'))
 
         except Exception as e:
@@ -178,17 +201,51 @@ def add_case():
     
     return render_template('add_case.html', form=form)
 
-@app.route('/view_case')
-def view_case():
-    return render_template('view_case.html')
+
+from bson.objectid import ObjectId  # Import to handle ObjectId conversion
+
+@app.route('/edit_document/<document_id>', methods=['GET', 'POST'])
+def edit_document(document_id):
+    db_session = SessionLocal()
+    user = db_session.query(Worker).get(session['user'])
+
+    # Convert document_id to ObjectId
+    document = mongo_db.documents.find_one({"_id": ObjectId(document_id)})
+    if not document:
+        flash("Document not found.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Ensure the user has permission
+    if user.role != 'admin' and document['worker_id'] != user.id:
+        flash("You do not have permission to edit this document.", "danger")
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        # Get updated values from the form
+        updated_title = request.form.get('document_title')
+        updated_description = request.form.get('document_description')
+        updated_tags = request.form.get('document_tags').split(',')
+
+        # Update the document in MongoDB
+        mongo_db.documents.update_one(
+            {"_id": ObjectId(document_id)},
+            {"$set": {
+                "document_title": updated_title,
+                "document_description": updated_description,
+                "document_tags": [tag.strip() for tag in updated_tags],
+                "last_modified": datetime.utcnow()
+            }}
+        )
+        flash("Document updated successfully.", "success")
+        return redirect(url_for('view_case_details', case_id=document['case_id']))
+
+    db_session.close()
+    return render_template('edit_document.html', document=document)
+
 
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
-
-@app.route('/edit_case')
-def edit_case():
-    return render_template('edit_case.html')
 
 @app.route('/delete_case')
 def delete_case():

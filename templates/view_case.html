@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}View Case{% endblock %}
+
+{% block content %}
+<h2>Select a Case to View</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Case ID</th>
+            <th>Client Name</th>
+            <th>Case Title</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for case in cases %}
+        <tr>
+            <td>{{ case.id }}</td>
+            <td>{{ case.client.name }} {{ case.client.last_name }}</td>
+            <td>{{ case.case_title }}</td>
+            <td>
+                <a href="{{ url_for('view_case_details', case_id=case.id) }}" class="btn btn-primary">View</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
