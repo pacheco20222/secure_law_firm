@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 import secrets
 import os
 from datetime import datetime
-import base64
+from bson.objectid import ObjectId  # Import to handle ObjectId conversion
 from services.digitalocean_space_service import upload_file_to_space, delete_file_from_space
 
 app = Flask(__name__)
@@ -202,7 +202,7 @@ def add_case():
     return render_template('add_case.html', form=form)
 
 
-from bson.objectid import ObjectId  # Import to handle ObjectId conversion
+
 
 @app.route('/edit_document/<document_id>', methods=['GET', 'POST'])
 def edit_document(document_id):
