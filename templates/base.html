@@ -15,16 +15,22 @@
         <div class="sidebar pe-4 pb-3">
             <nav class="navbar bg-secondary navbar-dark">
                 <a href="{{ url_for('dashboard') }}" class="navbar-brand mx-4 mb-3">
-                    <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
+                    <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure<br>Law Firm</h3>
                 </a>
+                <div class="d-flex align-items-center ms-4 mb-4">
+                    <div class="position-relative">
+                        <img class="rounded-circle" src="{{ url_for('static', filename='img/user.jpg') }}" alt="" style="width: 40px; height: 40px;">
+                        <div class="bg-success rounded-circle border border-2 border-white position-absolute end-0 bottom-0 p-1"></div>
+                    </div>
+                    <div class="ms-3">
+                        <h6 class="mb-0">{{ current_user.name if current_user else 'Guest' }}</h6>
+                        <span>{{ current_user.role.title() if current_user and current_user.role else 'User' }}</span>
+                    </div>
+                </div>
+                
                 <div class="navbar-nav w-100">
-                    <!-- base.html -->
                     <a href="{{ url_for('dashboard') }}" class="nav-item nav-link"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
                     <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
-                    <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
-                    <!-- Remove Edit Document link -->
-                    <a href="{{ url_for('view_case_details') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case Details</a>
-                    <a href="{{ url_for('delete_case') }}" class="nav-item nav-link"><i class="fa fa-trash me-2"></i>Delete Case</a>
                 </div>
             </nav>
         </div>
@@ -35,7 +41,7 @@
             
             <!-- Navbar Start -->
             <nav class="navbar navbar-expand bg-secondary navbar-dark sticky-top px-4 py-0">
-                <h2>Welcome, {% if current_user %}{{ current_user.name }}{% else %}Guest{% endif %}</h2>
+                <h2>Welcome, {{ current_user.name if current_user else 'Guest' }}</h2>
                 <div class="navbar-nav ms-auto">
                     <a href="{{ url_for('profile') }}" class="nav-item nav-link"><i class="fa fa-user"></i> Profile</a>
                     <a href="{{ url_for('logout') }}" class="nav-item nav-link"><i class="fa fa-sign-out-alt"></i> Log Out</a>
@@ -45,18 +51,16 @@
 
             <!-- Flash Messages Start -->
             <div class="container mt-4">
-                {% if request.endpoint == 'login' or request.endpoint == 'dashboard' %}
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                {% endif %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
             </div>
             <!-- Flash Messages End -->
 

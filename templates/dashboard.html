@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
     <title>Secure Law Firm - Dashboard</title>
@@ -33,7 +32,7 @@
         <div class="sidebar pe-4 pb-3">
             <nav class="navbar bg-secondary navbar-dark">
                 <a href="{{ url_for('dashboard') }}" class="navbar-brand mx-4 mb-3">
-                    <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure Law Firm</h3>
+                    <h3 class="text-primary"><i class="fa fa-user-edit me-2"></i>Secure<br>Law Firm</h3>
                 </a>
                 <div class="d-flex align-items-center ms-4 mb-4">
                     <div class="position-relative">
@@ -45,7 +44,7 @@
                         {% if current_user.role %}
                             <span>{{ current_user.role.title() }}</span>
                         {% else %}
-                            <span>User</span> <!-- Fallback if role is undefined -->
+                            <span>User</span>
                         {% endif %}
                     </div>
                 </div>
@@ -53,7 +52,6 @@
                 <div class="navbar-nav w-100">
                     <a href="{{ url_for('dashboard') }}" class="nav-item nav-link active"><i class="fa fa-tachometer-alt me-2"></i>Dashboard</a>
                     <a href="{{ url_for('add_case') }}" class="nav-item nav-link"><i class="fa fa-plus me-2"></i>Add Case</a>
-                    <a href="{{ url_for('view_case') }}" class="nav-item nav-link"><i class="fa fa-eye me-2"></i>View Case</a>
                 </div>
             </nav>
         </div>
@@ -101,7 +99,7 @@
             <!-- Main Content Start -->
             <div class="container-fluid pt-4 px-4">
                 <div class="bg-secondary text-center rounded p-4">
-                    <h3>Welcome to the Secure Law Firm Dashboard</h3>
+                    <h3>Welcome to the Secure Law Firm Dashboard, you can View your cases and administer them</h3>
                     <p>Use the sidebar to navigate through different sections of the system.</p>
                 </div>
 

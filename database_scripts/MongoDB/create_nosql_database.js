@@ -12,3 +12,6 @@ db.documents.insertOne({
   file_type: "application/pdf",
   document_tags: ["contract", "legal", "confidential"]
 });
+
+rs.initiate()
+rs.status()

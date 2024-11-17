@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, get_flashed_messages
 from config import SessionLocal, close_tunnels, mongo_db  
 from models.worker_model import Worker
 from services.auth_service import verify_password, verify_2fa_code, hash_password, generate_2fa_secret, generate_qr_code
@@ -13,6 +13,10 @@ import os
 from datetime import datetime
 from bson.objectid import ObjectId  # Import to handle ObjectId conversion
 from services.digitalocean_space_service import upload_file_to_space, delete_file_from_space
+import dotenv
+
+dotenv.load_dotenv()
+DO_SPACE_ENDPOINT = os.getenv("DO_SPACE_ENDPOINT")
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
@@ -23,6 +27,41 @@ def index():
     if 'user' in session:
         return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
+
+@app.route('/list_routes')
+def list_routes():
+    from flask import url_for
+    output = []
+    for rule in app.url_map.iter_rules():
+        options = {arg: f"[{arg}]" for arg in rule.arguments}
+        url = url_for(rule.endpoint, **options)
+        output.append(f"{rule.endpoint}: {url}")
+    return "<br>".join(output)
+
+@app.route('/view_case/<int:case_id>')
+def view_case_details(case_id):
+    db_session = SessionLocal()
+    user = db_session.query(Worker).get(session['user'])
+
+    case = db_session.query(Case).get(case_id)
+    if not case:
+        flash("Case not found.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Check if user has permission to view this case
+    if user.role != 'admin' and case.worker_id != user.id:
+        flash("You do not have permission to view this case.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Fetch documents associated with the case from MongoDB and convert _id to string
+    documents = []
+    for doc in mongo_db.documents.find({"case_id": case_id}):
+        doc["_id"] = str(doc["_id"])  # Convert ObjectId to string
+        documents.append(doc)
+
+    db_session.close()
+    return render_template('view_case_details.html', case=case, documents=documents, current_user=user)
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -48,6 +87,9 @@ def login():
     form = LoginForm()
     db_session = SessionLocal()
 
+    # Consume flash messages at the start to clear any lingering messages
+    _ = get_flashed_messages()
+
     if form.validate_on_submit():
         email = form.email.data
         password = form.password.data
@@ -57,7 +99,6 @@ def login():
         if user and verify_password(user.hashed_password, password):
             if user.two_fa_enabled and verify_2fa_code(user.two_fa_secret, two_factor_code):
                 session['user'] = user.id
-                flash('Login successful!', 'success')
                 return redirect(url_for('dashboard'))
             else:
                 flash('Invalid 2FA code.', 'danger')
@@ -126,10 +167,16 @@ def logout():
 def add_case():
     form = CaseForm()
     db_session = SessionLocal()
-    
+
+    # Fetch the current user from the Flask session
+    user = db_session.query(Worker).get(session['user'])
+
     # Load workers for lawyer and assistant selection
     form.lawyer_id.choices = [(w.id, w.name) for w in db_session.query(Worker).filter_by(role='lawyer').all()]
     form.assistant_id.choices = [(0, 'None')] + [(w.id, w.name) for w in db_session.query(Worker).filter_by(role='assistant').all()]
+
+    # Fetch only the attributes needed for the template
+    user_data = {"name": user.name, "role": user.role} if user else None
 
     if form.validate_on_submit():
         try:
@@ -194,14 +241,12 @@ def add_case():
             return redirect(url_for('dashboard'))
 
         except Exception as e:
-            db_session.rollback()
+            db_session.rollback()  # Rollback MySQL transaction
             flash(f"Error creating case: {e}", "danger")
         finally:
             db_session.close()
     
-    return render_template('add_case.html', form=form)
-
-
+    return render_template('add_case.html', form=form, current_user=user_data)
 
 
 @app.route('/edit_document/<document_id>', methods=['GET', 'POST'])
@@ -242,14 +287,137 @@ def edit_document(document_id):
     db_session.close()
     return render_template('edit_document.html', document=document)
 
+@app.route('/upload_document/<int:case_id>', methods=['POST'])
+def upload_document(case_id):
+    db_session = SessionLocal()
+    user = db_session.query(Worker).get(session['user'])
+    case = db_session.query(Case).get(case_id)
+
+    if not case:
+        flash("Case not found.", "danger")
+        return redirect(url_for('view_case_details', case_id=case_id))
+
+    if user.role not in ['admin', 'lawyer']:
+        flash("You do not have permission to upload documents to this case.", "danger")
+        return redirect(url_for('view_case_details', case_id=case_id))
+
+    document_title = request.form.get("document_title")
+    document_description = request.form.get("document_description")
+    uploaded_file = request.files.get("file")
+
+    if not uploaded_file:
+        flash("Please select a file to upload.", "danger")
+        return redirect(url_for('view_case_details', case_id=case_id))
+
+    mongo_session = mongo_db.client.start_session()
+    mongo_session.start_transaction()
+
+    try:
+        file_url = upload_file_to_space(uploaded_file)
+
+        document_data = {
+            "case_id": case_id,
+            "client_id": case.client_id,
+            "worker_id": case.worker_id,
+            "document_title": document_title,
+            "document_description": document_description,
+            "file_url": file_url,
+            "uploaded_by": user.name,
+            "uploaded_at": datetime.utcnow(),
+            "last_modified": datetime.utcnow(),
+            "file_type": uploaded_file.content_type,
+            "document_tags": ["new"]
+        }
+        mongo_db.documents.insert_one(document_data, session=mongo_session)
+        mongo_session.commit_transaction()
+        flash("Document uploaded successfully.", "success")
+    except Exception as e:
+        mongo_session.abort_transaction()
+        flash(f"Error uploading document: {e}", "danger")
+    finally:
+        mongo_session.end_session()
+        db_session.close()
+
+    return redirect(url_for('view_case_details', case_id=case_id))
+
 
 @app.route('/profile')
 def profile():
     return render_template('profile.html')
 
-@app.route('/delete_case')
-def delete_case():
-    return render_template('delete_case.html')
+from sqlalchemy.sql import text  # Import the text module for raw SQL
+
+@app.route('/delete_case/<int:case_id>', methods=['POST'])
+def delete_case(case_id):
+    db_session = SessionLocal()
+    user = db_session.query(Worker).get(session['user'])
+
+    if not user or user.role != 'admin':
+        flash("You do not have permission to delete this case.", "danger")
+        return redirect(url_for('dashboard'))
+
+    try:
+        # Get the case
+        case = db_session.query(Case).get(case_id)
+        if not case:
+            flash("Case not found.", "danger")
+            return redirect(url_for('dashboard'))
+
+        # Add an entry to the case_history table
+        case_history_entry = {
+            "case_id": case.id,
+            "worker_id": user.id,
+            "update_description": f"Case '{case.case_title}' deleted by {user.name}.",
+            "updated_at": datetime.utcnow(),
+        }
+        db_session.execute(
+            text("INSERT INTO case_history (case_id, worker_id, update_description, updated_at) "
+                 "VALUES (:case_id, :worker_id, :update_description, :updated_at)"),
+            case_history_entry
+        )
+
+        # Remove documents associated with the case in MongoDB
+        documents = mongo_db.documents.find({"case_id": case_id})
+        for document in documents:
+            # Delete the file from DigitalOcean Spaces
+            file_url = document.get("file_url")
+            if file_url:
+                file_path = file_url.replace(f"{DO_SPACE_ENDPOINT}/", "")
+                delete_file_from_space(file_path)
+
+            # Delete the document metadata from MongoDB
+            mongo_db.documents.delete_one({"_id": document["_id"]})
+
+        # Delete the case from the cases table
+        db_session.delete(case)  # Use the ORM method for deletion
+        db_session.commit()
+
+        flash(f"Case '{case.case_title}' has been deleted successfully.", "success")
+    except Exception as e:
+        db_session.rollback()
+        flash(f"Error deleting case: {e}", "danger")
+    finally:
+        db_session.close()
+
+    return redirect(url_for('dashboard'))
+
+@app.route('/confirm_delete/<int:case_id>', methods=['GET'])
+def confirm_delete(case_id):
+    db_session = SessionLocal()
+    user = db_session.query(Worker).get(session['user'])
+
+    if not user or user.role != 'admin':
+        flash("You do not have permission to delete this case.", "danger")
+        return redirect(url_for('dashboard'))
+
+    case = db_session.query(Case).get(case_id)
+    if not case:
+        flash("Case not found.", "danger")
+        return redirect(url_for('dashboard'))
+
+    db_session.close()
+    return render_template('delete_case.html', case=case)
+
 
 # Close session and SSH tunnel on teardown
 @app.teardown_appcontext

@@ -1,125 +1,58 @@
-import pymysql
-import pyotp  # For 2FA generation
-import qrcode  # For generating QR code
-import os
+from config import SessionLocal, close_tunnel
+from models.worker_model import Worker
+from services.auth_service import hash_password, generate_2fa_secret, generate_qr_code
+from sqlalchemy.exc import IntegrityError
 import dotenv
-from sshtunnel import SSHTunnelForwarder
-from hashlib import sha256  # For password hashing
+import os
 
-# Load environment variables
 dotenv.load_dotenv()
 
-# SSH Tunnel configuration
-SSH_HOST = os.getenv("SSH_HOST")
-SSH_PORT = int(os.getenv("SSH_PORT"))
-SSH_USER = os.getenv("SSH_USER")
-SSH_KEY_PATH = os.getenv("SSH_KEY_PATH")
-SSH_KEY_PASSPHRASE = os.getenv("SSH_KEY_PASSPHRASE")
+name = os.getenv("ADMIN_NAME")
+second_name = os.getenv("ADMIN_SECOND_NAME")
+last_name = os.getenv("ADMIN_LAST_NAME")
+second_last_name = os.getenv("ADMIN_SECOND_LAST_NAME")
+email = os.getenv("ADMIN_EMAIL")
+phone = os.getenv("ADMIN_PHONE")
+company_id = os.getenv("ADMIN_COMPANY_ID")
+password = os.getenv("ADMIN_PASSWORD")
 
-# MySQL configuration
-MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
-MYSQL_USER = os.getenv("MYSQL_USER")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
-MYSQL_DATABASE = os.getenv("MYSQL_DB")
-MYSQL_PORT = 3310  # Local port for SSH tunnel
-
-# Admin credentials from .env
-ADMIN_NAME = os.getenv("ADMIN_NAME")
-ADMIN_LAST_NAME = os.getenv("ADMIN_LAST_NAME")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
-ADMIN_PHONE = os.getenv("ADMIN_PHONE")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
-
-# SSH tunnel creation function
-def create_ssh_tunnel():
-    return SSHTunnelForwarder(
-        (SSH_HOST, SSH_PORT),
-        ssh_username=SSH_USER,
-        ssh_pkey=SSH_KEY_PATH,
-        ssh_private_key_password=SSH_KEY_PASSPHRASE,
-        remote_bind_address=('127.0.0.1', 3306),  # MySQL default port on remote server
-        local_bind_address=('127.0.0.1', MYSQL_PORT)  # MySQL will be accessible via this local port
-    )
-
-# Function to hash the password using SHA-256
-def hash_password(password):
-    return sha256(password.encode('utf-8')).hexdigest()
-
-# Function to generate the next company ID in the format "LR-001"
-def generate_company_id(cursor):
-    cursor.execute("SELECT COUNT(*) FROM workers;")
-    result = cursor.fetchone()
-    employee_number = result[0] + 1
-    return f"LR-{employee_number:03d}"  # Format the ID as LR-001, LR-002, etc.
-
-# Function to create admin user in MySQL with 2FA
-def create_admin_user():
-    tunnel = None
-    connection = None
+def create_user(name, second_name, last_name, second_last_name, email, phone, role, password):
+    session = SessionLocal()
     try:
-        # Start the SSH tunnel
-        tunnel = create_ssh_tunnel()
-        tunnel.start()
-        print("SSH tunnel started.")
+        hashed_password = hash_password(password)
+        two_fa_secret = generate_2fa_secret()
 
-        # Connect to MySQL via the SSH tunnel
-        connection = pymysql.connect(
-            host='127.0.0.1',  # Localhost due to SSH tunnel
-            user=MYSQL_USER,
-            password=MYSQL_PASSWORD,
-            database=MYSQL_DATABASE,
-            port=MYSQL_PORT  # The local bind port from the SSH tunnel
+        new_user = Worker(
+            name=name,
+            second_name=second_name,
+            last_name=last_name,
+            second_last_name=second_last_name,
+            email=email,
+            phone=phone,
+            role=role,
+            company_id=f"LR-{session.query(Worker).count() + 1:03d}",
+            hashed_password=hashed_password,
+            two_fa_secret=two_fa_secret,
+            two_fa_enabled=True
         )
-        cursor = connection.cursor()
-        print("Connected to MySQL.")
 
-        # Generate 2FA secret for the admin
-        admin_2fa_secret = pyotp.random_base32()
-        print(f"Admin's 2FA Secret: {admin_2fa_secret}")
+        session.add(new_user)
+        session.commit()
 
-        # Generate a QR code for Google Authenticator
-        otp_uri = pyotp.TOTP(admin_2fa_secret).provisioning_uri(name=ADMIN_EMAIL, issuer_name="SecureLawFirm")
-        
-        # Ensure QR code directory exists
-        qr_code_path = os.path.join("static", "qrcodes")
-        os.makedirs(qr_code_path, exist_ok=True)
-        qr = qrcode.make(otp_uri)
-        qr_file_path = os.path.join(qr_code_path, "admin_2fa_qr.png")
-        qr.save(qr_file_path)
-        print(f"QR code generated and saved as '{qr_file_path}'.")
+        # Generate QR code for 2FA
+        qr_code_path = generate_qr_code(email, "SecureLawFirm", two_fa_secret)
+        print(f"User created successfully! QR code saved at: {qr_code_path}")
 
-        # Generate the company ID in the format LR-XXX
-        company_id = generate_company_id(cursor)
-
-        # Hash the admin password
-        admin_hashed_password = hash_password(ADMIN_PASSWORD)
-
-        # Insert admin user into `workers` table
-        # Insert admin user into `workers` table
-        query = """
-        INSERT INTO workers (
-            name, last_name, email, phone, role, company_id, hashed_password, 2fa_secret, 2fa_enabled
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-        """
-        cursor.execute(query, (
-            ADMIN_NAME, ADMIN_LAST_NAME, ADMIN_EMAIL, ADMIN_PHONE, 'admin', company_id, 
-            admin_hashed_password, admin_2fa_secret, True
-        ))
-
-        connection.commit()
-
-        print(f"Admin user created successfully with company ID: {company_id}.")
-    
-    except Exception as e:
-        print(f"Error creating admin user: {e}")
-    
+    except IntegrityError:
+        session.rollback()
+        print("Error: Email or phone number already exists.")
     finally:
-        if connection:
-            connection.close()
-            print("MySQL connection closed.")
-        if tunnel:
-            tunnel.stop()
-            print("SSH tunnel closed.")
+        session.close()
+        close_tunnel()
 
+# Usage example
 if __name__ == "__main__":
-    create_admin_user()
+    create_user(
+        name="John", second_name="Doe", last_name="Smith", second_last_name="Johnson",
+        email="johnsmith@example.com", phone="123456789", role="lawyer", password="securepassword"
+    )
