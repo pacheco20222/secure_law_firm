@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Case{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Edit Case: {{ case.case_title }}</h2>
+    <form action="{{ url_for('update_case', case_id=case.id) }}" method="POST">
+        <div class="mb-3">
+            <label for="caseTitle" class="form-label">Case Title</label>
+            <input type="text" class="form-control" id="caseTitle" name="case_title" value="{{ case.case_title }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="caseDescription" class="form-label">Case Description</label>
+            <textarea class="form-control" id="caseDescription" name="case_description" required>{{ case.case_description }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label for="caseStatus" class="form-label">Case Status</label>
+            <select class="form-control" id="caseStatus" name="case_status" required>
+                <option value="Open" {% if case.case_status == "Open" %}selected{% endif %}>Open</option>
+                <option value="In Progress" {% if case.case_status == "In Progress" %}selected{% endif %}>In Progress</option>
+                <option value="Closed" {% if case.case_status == "Closed" %}selected{% endif %}>Closed</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Case</button>
+    </form>
+    <a href="{{ url_for('view_case_details', case_id=case.id) }}" class="btn btn-secondary mt-4">Cancel</a>
+</div>
+{% endblock %}

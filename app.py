@@ -418,6 +418,63 @@ def confirm_delete(case_id):
     db_session.close()
     return render_template('delete_case.html', case=case)
 
+@app.route('/cases/<int:case_id>/edit', methods=['GET'])
+def edit_case(case_id):
+    db_session = SessionLocal()
+
+    try:
+        # Get the currently logged-in user
+        user = db_session.query(Worker).get(session.get('user'))
+
+        # Ensure the user exists and has the appropriate role
+        if not user or user.role not in ['admin', 'lawyer']:
+            flash("You are not authorized to edit this case", "danger")
+            return redirect(url_for('dashboard'))
+
+        # Retrieve the case
+        case = db_session.query(Case).get(case_id)
+        if not case:
+            flash("Case not found", "danger")
+            return redirect(url_for('dashboard'))
+
+        # Close the session before rendering the template
+        db_session.close()
+
+        # Render the edit case form
+        return render_template('edit_case.html', case=case)
+
+    except Exception as e:
+        # Handle unexpected errors
+        db_session.rollback()
+        flash(f"An error occurred: {e}", "danger")
+        return redirect(url_for('dashboard'))
+
+    finally:
+        # Ensure the database session is closed
+        db_session.close()
+
+@app.route('/cases/<int:case_id>/update', methods=['POST'])
+def update_case(case_id):
+    db_session = SessionLocal()
+    case = db_session.query(Case).get(case_id)
+    if not case:
+        flash("Case not found", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Update case details from the form
+    case.case_title = request.form['case_title']
+    case.case_description = request.form['case_description']
+    case.case_status = request.form['case_status']
+    try:
+        db_session.commit()
+        flash("Case updated successfully", "success")
+    except Exception as e:
+        db_session.rollback()
+        flash(f"Error updating case: {e}", "danger")
+    finally:
+        db_session.close()
+    return redirect(url_for('view_case_details', case_id=case_id))
+
 
 # Close session and SSH tunnel on teardown
 @app.teardown_appcontext

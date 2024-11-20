@@ -43,6 +43,11 @@
         <button type="submit" class="btn btn-success">Upload Document</button>
     </form>
 
+    <!-- Add Edit Case Button -->
+    {% if current_user.role == 'admin' or current_user.role == 'lawyer' %}
+    <a href="{{ url_for('edit_case', case_id=case.id) }}" class="btn btn-warning mt-4">Edit Case</a>
+    {% endif %}
+
     <!-- Back Button to Dashboard -->
     <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mt-4">Back to Dashboard</a>
 
