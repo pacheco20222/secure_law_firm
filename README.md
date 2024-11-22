@@ -154,26 +154,61 @@ flask run
 ## File Structure
 
 ``` php
-.
-├── app.py                      # Flask application entry point
-├── config.py                   # Application configuration
-├── requirements.txt            # Python dependencies
-├── templates/                  # HTML templates
-│   ├── base.html
+secure_law_firm/
+│
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── notes.txt
+├── app.py                     # Main entry point of the application
+├── config.py                  # Configuration settings
+├── forms.py                   # Form definitions for Flask-WTF
+│
+├── database_scripts/          # Scripts related to database setup and management
+│   ├── database_setup.py      # Database initialization logic
+│   ├── create_user.py         # Script to create users in the databases
+│   ├── MySQL/
+│   │   └── create_sql_database.sql
+│   ├── MongoDB/
+│       └── create_nosql_database.js
+│
+├── models/                    # ORM models for both relational and non-relational databases
+│   ├── __init__.py
+│   ├── case_model.py
+│   ├── client_model.py
+│   ├── worker_model.py
+│
+├── services/                  # Application services (e.g., authentication, third-party integrations)
+│   ├── __init__.py
+│   ├── auth_service.py
+│   ├── digitalocean_space_service.py
+│
+├── static/                    # Static files (CSS, JS, Images, etc.)
+│   ├── css/
+│   │   ├── bootstrap.min.css
+│   │   └── style.css
+│   ├── js/
+│   │   └── main.js
+│   ├── img/                   # Images and media
+│   └── qrcodes/               # Folder to store QR codes
+│
+├── templates/                 # HTML templates for the Flask app
+│   ├── base.html              # Base template for consistent layout
+│   ├── add_case.html
 │   ├── dashboard.html
+│   ├── display_qr.html
+│   ├── delete_case.html
+│   ├── edit_case.html
+│   ├── edit_document.html
+│   ├── login.html
+│   ├── profile.html
+│   ├── signup.html
 │   ├── view_case.html
 │   └── view_case_details.html
-├── static/                     # Static assets
-│   ├── css/
-│   ├── js/
-│   └── img/
-├── backup_scripts/             # Backup and restore scripts
-│   ├── backup_postgresql.sh
-│   ├── backup_mongodb.sh
-├── models/                     # Database models
-│   ├── case_model.py
-│   ├── user_model.py
-├── README.md                   # Documentation (this file)
+│
+├── darkpan-1.0.0/             # Template or theme files (if necessary for future use)
+│
+└── venv/                      # Python virtual environment (should be ignored by `.gitignore`)
 
 ```
 

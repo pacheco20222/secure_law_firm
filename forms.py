@@ -17,7 +17,7 @@ class SignupForm(FlaskForm):
     second_last_name = StringField('Second Last Name', validators=[Length(max=100)])
     email = StringField('Email', validators=[DataRequired(), Email(), Length(max=100)])
     phone = StringField('Phone', validators=[DataRequired(), Length(max=25)])
-    role = SelectField('Role', choices=[('admin', 'Admin'), ('lawyer', 'Lawyer'), ('assistant', 'Assistant')], validators=[DataRequired()])
+    role = SelectField('Role', choices=[('lawyer', 'Lawyer'), ('assistant', 'Assistant')], validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=255)])
     submit = SubmitField('Sign Up')
 

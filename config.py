@@ -23,7 +23,7 @@ LOCAL_PORT = 3310  # Changed local port to avoid conflicts
 
 # MongoDB Configuration
 MONGO_HOST = os.getenv("MONGO_HOST", "127.0.0.1")
-MONGO_LOCAL_PORT = int(os.getenv("MONGO_LOCAL_PORT", 27019))
+MONGO_LOCAL_PORT = 27019 # You can change this to avoid conflicts
 
 # Initialize tunnels as global variables
 mysql_tunnel = None
