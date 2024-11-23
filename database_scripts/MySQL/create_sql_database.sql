@@ -1,9 +1,7 @@
--- Make sure that auto-increment values continue incrementing after deletions
--- This setting is typically enabled by default in MySQL, but we can explicitly set it here.
-SET SESSION sql_mode = '';
+SET SESSION sql_mode = ''; -- Disable ONLY_FULL_GROUP_BY
 
 CREATE DATABASE law_firm;
-GRANT ALL PRIVILEGES ON law_firm.* TO 'user'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON law_firm.* TO 'user'@'127.0.0.1'; -- Replace 'user' with your MySQL username
 
 USE law_firm;
 
@@ -54,15 +52,4 @@ CREATE TABLE cases (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE
-);
-
--- Create the case_history table
-CREATE TABLE case_history (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    case_id INT,
-    worker_id INT,
-    update_description TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE,
-    FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE SET NULL
 );

@@ -6,15 +6,15 @@ from services.auth_service import verify_password, verify_2fa_code, hash_passwor
 from forms import LoginForm, SignupForm
 from models.case_model import Case
 from models.client_model import Client
-from models.case_history_model import case_history
 from forms import CaseForm
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import secrets
 import os
 from datetime import datetime
 from bson.objectid import ObjectId  # Import to handle ObjectId conversion
 from services.digitalocean_space_service import upload_file_to_space, delete_file_from_space
 import dotenv
+import logging
 
 dotenv.load_dotenv()
 DO_SPACE_ENDPOINT = os.getenv("DO_SPACE_ENDPOINT")
@@ -348,88 +348,75 @@ def profile():
 
 from sqlalchemy.sql import text  # Import the text module for raw SQL
 
+
 @app.route('/delete_case/<int:case_id>', methods=['POST'])
 def delete_case(case_id):
-    db_session = SessionLocal()
-    user = db_session.query(Worker).get(session['user'])
-
-    if not user or user.role != 'admin':
-        flash("You do not have permission to delete this case.", "danger")
-        return redirect(url_for('dashboard'))
-
     try:
-        # Get the case
-        case = db_session.query(Case).get(case_id)
-        if not case:
-            flash("Case not found.", "danger")
-            return redirect(url_for('dashboard'))
+        with SessionLocal() as db_session:
+            # Retrieve the logged-in user
+            user = db_session.query(Worker).get(session.get('user'))
 
-        # Add an entry to the case_history table
-        case_history_entry = {
-            "case_id": case.id,
-            "worker_id": user.id,
-            "update_description": f"Case '{case.case_title}' deleted by {user.name}.",
-            "updated_at": datetime.utcnow(),
-        }
-        
-        case_history_entry = case_history(
-            case_id=case.id,
-            worker_id=user.id,
-            update_description=f"Case '{case.case_title}' deleted by {user.name}.",
-            updated_at=datetime.utcnow()
-            
-        )
-        
-        db_session.add(case_history_entry)
-        db_session.commit()
-        
-        db_session.execute(
-            text("INSERT INTO case_history (case_id, worker_id, update_description, updated_at) "
-                 "VALUES (:case_id, :worker_id, :update_description, :updated_at)"),
-            case_history_entry
-        )
+            if not user or user.role != 'admin':
+                flash("You do not have permission to delete this case.", "danger")
+                return redirect(url_for('dashboard'))
 
-        # Remove documents associated with the case in MongoDB
-        documents = mongo_db.documents.find({"case_id": case_id})
-        for document in documents:
-            # Delete the file from DigitalOcean Spaces
-            file_url = document.get("file_url")
-            if file_url:
-                file_path = file_url.replace(f"{DO_SPACE_ENDPOINT}/", "")
-                delete_file_from_space(file_path)
+            # Retrieve the case
+            case = db_session.query(Case).get(case_id)
+            if not case:
+                flash("Case not found.", "danger")
+                return redirect(url_for('dashboard'))
 
-            # Delete the document metadata from MongoDB
-            mongo_db.documents.delete_one({"_id": document["_id"]})
+            # Remove documents associated with the case in MongoDB
+            documents = mongo_db.documents.find({"case_id": case_id})
+            for document in documents:
+                # Delete the file from DigitalOcean Spaces
+                file_url = document.get("file_url")
+                if file_url:
+                    file_path = file_url.replace(f"{DO_SPACE_ENDPOINT}/", "")
+                    try:
+                        delete_file_from_space(file_path)
+                    except Exception as e:
+                        logging.error(f"Failed to delete file {file_path} from Spaces: {e}")
 
-        # Delete the case from the cases table
-        db_session.delete(case)  # Use the ORM method for deletion
-        db_session.commit()
+                # Delete the document metadata from MongoDB
+                mongo_db.documents.delete_one({"_id": document["_id"]})
 
-        flash(f"Case '{case.case_title}' has been deleted successfully.", "success")
-    except Exception as e:
-        db_session.rollback()
+            # Delete the case using ORM
+            db_session.delete(case)
+            db_session.commit()
+
+            flash(f"Case '{case.case_title}' has been deleted successfully.", "success")
+    except SQLAlchemyError as e:
+        logging.error(f"SQLAlchemy error occurred: {e}")
         flash(f"Error deleting case: {e}", "danger")
-    finally:
-        db_session.close()
+    except Exception as e:
+        logging.error(f"Unexpected error occurred: {e}")
+        flash(f"Error deleting case: {e}", "danger")
 
     return redirect(url_for('dashboard'))
 
 @app.route('/confirm_delete/<int:case_id>', methods=['GET'])
 def confirm_delete(case_id):
-    db_session = SessionLocal()
-    user = db_session.query(Worker).get(session['user'])
+    try:
+        with SessionLocal() as db_session:
+            # Retrieve the logged-in user
+            user = db_session.query(Worker).get(session.get('user'))
 
-    if not user or user.role != 'admin':
-        flash("You do not have permission to delete this case.", "danger")
+            if not user or user.role != 'admin':
+                flash("You do not have permission to delete this case.", "danger")
+                return redirect(url_for('dashboard'))
+
+            # Retrieve the case
+            case = db_session.query(Case).get(case_id)
+            if not case:
+                flash("Case not found.", "danger")
+                return redirect(url_for('dashboard'))
+
+            return render_template('delete_case.html', case=case)
+    except Exception as e:
+        logging.error(f"Unexpected error occurred: {e}")
+        flash(f"Error retrieving case: {e}", "danger")
         return redirect(url_for('dashboard'))
-
-    case = db_session.query(Case).get(case_id)
-    if not case:
-        flash("Case not found.", "danger")
-        return redirect(url_for('dashboard'))
-
-    db_session.close()
-    return render_template('delete_case.html', case=case)
 
 @app.route('/cases/<int:case_id>/edit', methods=['GET'])
 def edit_case(case_id):
