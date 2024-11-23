@@ -44,7 +44,7 @@
                 <h2>Welcome, {{ current_user.name if current_user else 'Guest' }}</h2>
                 <div class="navbar-nav ms-auto">
                     <a href="{{ url_for('profile') }}" class="nav-item nav-link"><i class="fa fa-user"></i> Profile</a>
-                    <a href="{{ url_for('logout') }}" class="nav-item nav-link"><i class="fa fa-sign-out-alt"></i> Log Out</a>
+                    <a href="{{ url_for('logout') }}" class="nav-item nav-link"><i class="fa fa-sign-out-alt"></i>Log Out</a>
                 </div>
             </nav>
             <!-- Navbar End -->

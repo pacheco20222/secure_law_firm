@@ -4,7 +4,7 @@
 {% block title %}Add Case{% endblock %}
 
 {% block content %}
-<h2>Create a New Case</h2>
+<h2>Create a New Case (Enter the client details, and the case details)</h2>
 <form method="POST" action="{{ url_for('add_case') }}" enctype="multipart/form-data">
     {{ form.hidden_tag() }}
     <div class="mb-3">

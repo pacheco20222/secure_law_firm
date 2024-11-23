@@ -6,6 +6,7 @@ from services.auth_service import verify_password, verify_2fa_code, hash_passwor
 from forms import LoginForm, SignupForm
 from models.case_model import Case
 from models.client_model import Client
+from models.case_history_model import case_history
 from forms import CaseForm
 from sqlalchemy.exc import IntegrityError
 import secrets
@@ -370,6 +371,18 @@ def delete_case(case_id):
             "update_description": f"Case '{case.case_title}' deleted by {user.name}.",
             "updated_at": datetime.utcnow(),
         }
+        
+        case_history_entry = case_history(
+            case_id=case.id,
+            worker_id=user.id,
+            update_description=f"Case '{case.case_title}' deleted by {user.name}.",
+            updated_at=datetime.utcnow()
+            
+        )
+        
+        db_session.add(case_history_entry)
+        db_session.commit()
+        
         db_session.execute(
             text("INSERT INTO case_history (case_id, worker_id, update_description, updated_at) "
                  "VALUES (:case_id, :worker_id, :update_description, :updated_at)"),
