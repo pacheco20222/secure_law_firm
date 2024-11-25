@@ -82,9 +82,9 @@ pip install -r requirements.txt # or you could use pip3 install -r requirements.
 3. Remember to configure the environment variables: Create the .env file in the root project directory and set up your variables
 
 4. Initilize the Database:
-* For MySQL, go to the database_scripts folder, then to the MySQL folder, and copy the create_sql_database.sql for the MySQL database in your server
+* For MySQL, go to the database folder, then to the MySQL/MySQL_scipt folder, and copy the create_sql_database.sql for the MySQL database in your server
 
-* For MongoDB go to the database_scripts folder, then to the MongoDB folder, and copy the script create_nosql_database.js, this java script file has the commands to create the collections. Remember in mongo you will need to use. use name_of_your_db, and then you will create the collection with the script
+* For MongoDB go to the database folder, then to the MongoDB/MongoDB_script folder, and copy the script create_nosql_database.js, this java script file has the commands to create the collections. Remember in mongo you will need to use. use name_of_your_db, and then you will create the collection with the script
 
 5. Run the application
 ```bash
@@ -164,13 +164,19 @@ secure_law_firm/
 ├── config.py                  # Configuration settings
 ├── forms.py                   # Form definitions for Flask-WTF
 │
-├── database_scripts/          # Scripts related to database setup and management
+├── database/          # Scripts related to database setup and management
 │   ├── database_setup.py      # Database initialization logic
 │   ├── create_user.py         # Script to create users in the databases
 │   ├── MySQL/
-│   │   └── create_sql_database.sql
+│   │   └── MySQL_script
+            └── create_sql_database.sql
+        └── MySQL_Diagram
+            └── Diccionario_de_Datos_MongoDB.html
+            └── Logical_MySQL.pdf
+            └── Relational_MySQL.pdf
 │   ├── MongoDB/
-│       └── create_nosql_database.js
+│       └── MongoDB_script
+            └── create_nosql_database.js
 │
 ├── models/                    # ORM models for both relational and non-relational databases
 │   ├── __init__.py
