@@ -14,9 +14,9 @@ MONGO_HOST=127.0.0.1
 MONGO_LOCAL_PORT="The port your computer will use to create the tunnel, if you have MongoDB running on your pc might need to set up
 another port from the usual MongoDB"
 
-ADMIN_NAME=Jose
-ADMIN_LAST_NAME=Pacheco
-ADMIN_USER=admin_pacheco
-ADMIN_PASSWORD=Pajarito1234
-ADMIN_EMAIL=jrp2022@gmail.com
-ADMIN_PHONE=9997002072
+ADMIN_NAME=name
+ADMIN_LAST_NAME=name
+ADMIN_USER=username
+ADMIN_PASSWORD=Your_Password
+ADMIN_EMAIL=admin_email 
+ADMIN_PHONE=admin_phone_number

@@ -15,6 +15,7 @@ from bson.objectid import ObjectId  # Import to handle ObjectId conversion
 from services.digitalocean_space_service import upload_file_to_space, delete_file_from_space
 import dotenv
 import logging
+from flask import url_for
 
 dotenv.load_dotenv()
 DO_SPACE_ENDPOINT = os.getenv("DO_SPACE_ENDPOINT")
@@ -31,7 +32,6 @@ def index():
 
 @app.route('/list_routes')
 def list_routes():
-    from flask import url_for
     output = []
     for rule in app.url_map.iter_rules():
         options = {arg: f"[{arg}]" for arg in rule.arguments}
