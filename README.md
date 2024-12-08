@@ -167,6 +167,9 @@ secure_law_firm/
 ├── database/          # Scripts related to database setup and management
 │   ├── database_setup.py      # Database initialization logic
 │   ├── create_user.py         # Script to create users in the databases
+│   ├── backup_scripts/
+        └── mongodb_backup.sh
+        └── mysql_backup.sh
 │   ├── MySQL/
 │   │   └── MySQL_script
             └── create_sql_database.sql
@@ -183,6 +186,8 @@ secure_law_firm/
 │   ├── case_model.py
 │   ├── client_model.py
 │   ├── worker_model.py
+│   ├── case_history_model.py
+│   ├── client_history_model.py
 │
 ├── services/                  # Application services (e.g., authentication, third-party integrations)
 │   ├── __init__.py

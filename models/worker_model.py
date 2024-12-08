@@ -17,6 +17,7 @@ class Worker(Base):
     second_last_name = Column(String(100), nullable=True)
     email = Column(String(100), unique=True, nullable=False)
     phone = Column(String(25), unique=True, nullable=False)
+    curp = Column(String(20), unique=True, nullable=False)
     role = Column(String(50), nullable=False)
     company_id = Column(String(20), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)

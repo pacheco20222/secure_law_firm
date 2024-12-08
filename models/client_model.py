@@ -12,6 +12,7 @@ class Client(Base):
     second_last_name = Column(String(100), nullable=True)
     email = Column(String(100), unique=True, nullable=False)
     phone = Column(String(25), unique=True, nullable=False)
+    curp = Column(String(20), unique=True, nullable=False)
     address = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

@@ -16,6 +16,8 @@ from services.digitalocean_space_service import upload_file_to_space, delete_fil
 import dotenv
 import logging
 from flask import url_for
+from models.case_history_model import CaseHistory
+from models.client_history_model import ClientHistory
 
 dotenv.load_dotenv()
 DO_SPACE_ENDPOINT = os.getenv("DO_SPACE_ENDPOINT")
@@ -129,6 +131,7 @@ def signup():
                 second_last_name=form.second_last_name.data,
                 email=form.email.data,
                 phone=form.phone.data,
+                curp=form.curp.data,
                 role=form.role.data,
                 company_id=f"LR-{db_session.query(Worker).count() + 1:03d}",
                 hashed_password=hashed_password,
@@ -191,6 +194,7 @@ def add_case():
                     second_last_name=form.client_second_last_name.data,
                     email=form.client_email.data,
                     phone=form.client_phone.data,
+                    curp=form.client_curp.data,
                     address=form.client_address.data
                 )
                 db_session.add(client)
@@ -355,10 +359,9 @@ def delete_case(case_id):
         with SessionLocal() as db_session:
             # Retrieve the logged-in user
             user = db_session.query(Worker).get(session.get('user'))
-
-            if not user or user.role != 'admin':
-                flash("You do not have permission to delete this case.", "danger")
-                return redirect(url_for('dashboard'))
+            if not user:
+                flash("You must be logged in to perform this action.", "danger")
+                return redirect(url_for('login'))
 
             # Retrieve the case
             case = db_session.query(Case).get(case_id)
@@ -366,34 +369,90 @@ def delete_case(case_id):
                 flash("Case not found.", "danger")
                 return redirect(url_for('dashboard'))
 
-            # Remove documents associated with the case in MongoDB
+            # Archive the case into `case_history`
+            try:
+                case_history = CaseHistory(
+                    case_id=case.id,
+                    client_id=case.client_id,
+                    worker_id=case.worker_id,
+                    case_title=case.case_title,
+                    case_description=case.case_description,
+                    case_status=case.case_status,
+                    case_type=case.case_type,
+                    court_date=case.court_date,
+                    judge_name=case.judge_name
+                )
+                db_session.add(case_history)
+                logging.info(f"Archived case ID {case_id} to case_history.")
+            except Exception as e:
+                logging.error(f"Failed to archive case ID {case_id}: {e}")
+                flash(f"Error archiving case: {e}", "danger")
+                return redirect(url_for('dashboard'))
+
+            # Check if the client has other active cases
+            try:
+                client = db_session.query(Client).get(case.client_id)
+                active_cases = db_session.query(Case).filter(Case.client_id == client.id).count()
+
+                # Archive the client into `client_history` if no active cases remain
+                if active_cases <= 1:  # The current case is the only one
+                    client_history = ClientHistory(
+                        client_id=client.id,
+                        name=client.name,
+                        second_name=client.second_name,
+                        last_name=client.last_name,
+                        second_last_name=client.second_last_name,
+                        email=client.email,
+                        phone=client.phone,
+                        address=client.address,
+                        curp=client.curp
+                    )
+                    db_session.add(client_history)
+                    logging.info(f"Archived client ID {client.id} to client_history.")
+
+                    # Delete client from client_history
+                    try:
+                        archived_client = db_session.query(ClientHistory).filter_by(client_id=client.id).first()
+                        if archived_client:
+                            db_session.delete(archived_client)
+                            logging.info(f"Deleted archived client ID {client.id} from client_history.")
+                    except Exception as e:
+                        logging.error(f"Failed to delete archived client ID {client.id}: {e}")
+                        db_session.rollback()
+                        flash(f"Error deleting archived client: {e}", "danger")
+                        return redirect(url_for('dashboard'))
+
+            except Exception as e:
+                logging.error(f"Failed to archive client ID {client.id}: {e}")
+                flash(f"Error archiving client: {e}", "danger")
+                return redirect(url_for('dashboard'))
+
+            # Remove associated documents in MongoDB
             documents = mongo_db.documents.find({"case_id": case_id})
             for document in documents:
-                # Delete the file from DigitalOcean Spaces
                 file_url = document.get("file_url")
                 if file_url:
                     file_path = file_url.replace(f"{DO_SPACE_ENDPOINT}/", "")
                     try:
                         delete_file_from_space(file_path)
                     except Exception as e:
-                        logging.error(f"Failed to delete file {file_path} from Spaces: {e}")
-
-                # Delete the document metadata from MongoDB
+                        logging.error(f"Failed to delete file {file_path} from DigitalOcean Spaces: {e}")
                 mongo_db.documents.delete_one({"_id": document["_id"]})
 
-            # Delete the case using ORM
+            # Delete the case from the `cases` table
             db_session.delete(case)
             db_session.commit()
+            flash(f"Case '{case.case_title}' has been deleted and archived successfully.", "success")
 
-            flash(f"Case '{case.case_title}' has been deleted successfully.", "success")
     except SQLAlchemyError as e:
-        logging.error(f"SQLAlchemy error occurred: {e}")
+        logging.error(f"SQLAlchemy error: {e}")
         flash(f"Error deleting case: {e}", "danger")
     except Exception as e:
-        logging.error(f"Unexpected error occurred: {e}")
+        logging.error(f"Unexpected error: {e}")
         flash(f"Error deleting case: {e}", "danger")
 
     return redirect(url_for('dashboard'))
+
 
 @app.route('/confirm_delete/<int:case_id>', methods=['GET'])
 def confirm_delete(case_id):
@@ -402,7 +461,7 @@ def confirm_delete(case_id):
             # Retrieve the logged-in user
             user = db_session.query(Worker).get(session.get('user'))
 
-            if not user or user.role != 'admin':
+            if not user:
                 flash("You do not have permission to delete this case.", "danger")
                 return redirect(url_for('dashboard'))
 
