@@ -49,6 +49,6 @@ def create_user(name, second_name, last_name, second_last_name, email, phone, cu
 # Usage example
 if __name__ == "__main__":
     create_user(
-        name="Jose", second_name="Ricardo", last_name="Pacheco", second_last_name="Chanico",
-        email="jrp2022@gmail.com", phone="123456789", curp="pap243425", role="admin", password="securepassword"
+        name="Name", second_name="Second name", last_name="first name", second_last_name="second last name",
+        email="youremail@gmail.com", phone="phone", curp="your curp", role="admin", password="securepassword"
     )

@@ -1,3 +1,10 @@
+## Attribution
+
+This project uses a free HTML template provided by [HTML Codex](https://htmlcodex.com) under the [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/). 
+
+You can find the original template and details at [HTML Codex](https://htmlcodex.com).
+
+
 # Secure Law Firm Case Management System
 
 ## Project Overview

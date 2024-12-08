@@ -69,19 +69,20 @@ def view_case_details(case_id):
 @app.route('/dashboard')
 def dashboard():
     if 'user' in session:
-        db_session = SessionLocal()
-        user = db_session.query(Worker).get(session['user'])
+        with SessionLocal() as db_session:  # Use a context manager to ensure session cleanup
+            user = db_session.query(Worker).get(session['user'])
 
-        # Retrieve cases based on user role
-        if user.role == 'admin':
-            cases = db_session.query(Case).all()
-        elif user.role == 'lawyer':
-            cases = db_session.query(Case).filter_by(worker_id=user.id).all()
-        else:  # For assistants, show only their assigned cases
-            cases = db_session.query(Case).join(Client, Case.client_id == Client.id).filter(Client.worker_id == user.id).all()
-        
-        db_session.close()
-        return render_template('dashboard.html', current_user=user, cases=cases)
+            # Retrieve cases based on user role
+            if user.role == 'admin':
+                cases = db_session.query(Case).all()
+            elif user.role == 'lawyer':
+                cases = db_session.query(Case).filter(Case.worker_id == user.id).all()
+            else:  # For assistants, show only their assigned cases
+                # Assistants don't interact with the Client.worker_id; use Case.worker_id
+                cases = db_session.query(Case).filter(Case.worker_id == user.id).all()
+
+            return render_template('dashboard.html', current_user=user, cases=cases)
+
     return redirect(url_for('login'))
 
 
@@ -294,56 +295,35 @@ def edit_document(document_id):
 
 @app.route('/upload_document/<int:case_id>', methods=['POST'])
 def upload_document(case_id):
-    db_session = SessionLocal()
-    user = db_session.query(Worker).get(session['user'])
-    case = db_session.query(Case).get(case_id)
-
-    if not case:
-        flash("Case not found.", "danger")
-        return redirect(url_for('view_case_details', case_id=case_id))
-
-    if user.role not in ['admin', 'lawyer']:
-        flash("You do not have permission to upload documents to this case.", "danger")
-        return redirect(url_for('view_case_details', case_id=case_id))
-
-    document_title = request.form.get("document_title")
-    document_description = request.form.get("document_description")
-    uploaded_file = request.files.get("file")
-
-    if not uploaded_file:
-        flash("Please select a file to upload.", "danger")
-        return redirect(url_for('view_case_details', case_id=case_id))
-
-    mongo_session = mongo_db.client.start_session()
-    mongo_session.start_transaction()
-
     try:
+        document_title = request.form.get("document_title")
+        document_description = request.form.get("document_description")
+        uploaded_file = request.files.get("document")
+        
+        # Validate inputs
+        if not document_title or not uploaded_file:
+            flash("Document title and file are required.", "danger")
+            return redirect(url_for('view_case_details', case_id=case_id))
+        
+        # Save the file to DigitalOcean Spaces
         file_url = upload_file_to_space(uploaded_file)
-
-        document_data = {
+        
+        # Insert document metadata into MongoDB
+        mongo_db.documents.insert_one({
             "case_id": case_id,
-            "client_id": case.client_id,
-            "worker_id": case.worker_id,
-            "document_title": document_title,
-            "document_description": document_description,
+            "title": document_title,
+            "description": document_description,
             "file_url": file_url,
-            "uploaded_by": user.name,
-            "uploaded_at": datetime.utcnow(),
-            "last_modified": datetime.utcnow(),
-            "file_type": uploaded_file.content_type,
-            "document_tags": ["new"]
-        }
-        mongo_db.documents.insert_one(document_data, session=mongo_session)
-        mongo_session.commit_transaction()
+            "uploaded_by": session['user'],
+            "uploaded_at": datetime.utcnow()
+        })
+        
         flash("Document uploaded successfully.", "success")
     except Exception as e:
-        mongo_session.abort_transaction()
+        logging.error(f"Error uploading document: {e}")
         flash(f"Error uploading document: {e}", "danger")
-    finally:
-        mongo_session.end_session()
-        db_session.close()
 
-    return redirect(url_for('view_case_details', case_id=case_id))
+    return redirect(url_for('view_case_details', case_id=case_id))  # Update the endpoint name here
 
 
 @app.route('/profile')

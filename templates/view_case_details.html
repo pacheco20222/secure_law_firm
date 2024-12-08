@@ -34,11 +34,11 @@
         </div>
         <div class="mb-3">
             <label for="documentDescription" class="form-label">Document Description</label>
-            <textarea class="form-control" id="documentDescription" name="document_description" required></textarea>
+            <textarea class="form-control" id="documentDescription" name="document_description"></textarea>
         </div>
         <div class="mb-3">
             <label for="file" class="form-label">Select Document</label>
-            <input type="file" class="form-control" id="file" name="file" required>
+            <input type="file" class="form-control" id="file" name="document" required>
         </div>
         <button type="submit" class="btn btn-success">Upload Document</button>
     </form>
@@ -54,7 +54,5 @@
     <!-- Delete Case Button -->
     <a href="{{ url_for('confirm_delete', case_id=case.id) }}" class="btn btn-danger mt-4">Delete Case</a>
     {% endif %}
-
-    
 </div>
 {% endblock %}
